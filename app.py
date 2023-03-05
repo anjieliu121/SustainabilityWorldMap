@@ -14,6 +14,7 @@ from shinywidgets import output_widget, reactive_read, register_widget
 from googlesearch import search
 
 import geopandas as gpd
+import math
 
 
 # remember to uninstall: ipyleaflet, ipywidgets, shinywidgets, google,
@@ -30,10 +31,15 @@ co2 = pd.read_csv(infile)
 keys = list(co2.country_name.unique())
 values = list(co2.country_name.unique())
 d_country = { k:v for (k,v) in zip(keys, values) }
+comin = math.floor(min(co2.value))
+comax = math.ceil(max(co2.value))
+a = sum(co2.value)/len(co2.value)
+
+keyyear = list(range(1960, 2020))
 
 
 app_ui = ui.page_fluid(
-    ui.h2("Hello Shiny!"),
+    ui.h2("Sustainability Map!"),
     ui.row(
         ui.column(
             6,
@@ -48,7 +54,9 @@ app_ui = ui.page_fluid(
         ui.column(
             6,
             ui.div(
-                ui.input_slider("zoom", "Map zoom level", min=1, max=18, value=1),
+                ui.input_slider("co2emission", "Select CO2 Emission", min=0, max=13000000, value=8000000),
+                ui.input_slider("co2year", "Select a Year", min=1960, max=2019, value=2019),
+                #ui.input_slider("zoom", "Map zoom level", min=1, max=18, value=1),
                 ui.output_ui("map_bounds"),
             ),
             output_widget("map"),
@@ -57,7 +65,7 @@ app_ui = ui.page_fluid(
     ui.row(
         ui.h4("Check out why this country has such CO2 emission:"),
         ui.tags.link(ui.output_text_verbatim("websites")),
-    
+        
     )
     
     
@@ -69,8 +77,7 @@ def server(input, output, session):
     
 
     center = [20,0]
-    zoom = 2
-    m = L.Map(basemap=L.basemaps.CartoDB.Positron, center=center, zoom=zoom)
+    m = L.Map(basemap=L.basemaps.CartoDB.Positron, center=center, zoom=1)
     m.add_control(L.leaflet.ScaleControl(position="bottomleft"))
     
     #highlight = L.GeoData(geo_dataframe = c, 
@@ -78,7 +85,7 @@ def server(input, output, session):
     #hover_style={'fillColor': 'green', 'fillOpacity': 1})
 
     #m.add_layer(highlight)
-
+    register_widget("map", m)
     
     
     # When the slider changes, update the map's zoom attribute (2)
@@ -95,20 +102,38 @@ def server(input, output, session):
     @reactive.Effect
     def _():
         center = [20,0]
-        zoom = 2
+        zoom = 1
         m = L.Map(basemap=L.basemaps.CartoDB.Positron, center=center, zoom=zoom)
+        m.add_control(L.leaflet.ScaleControl(position="bottomleft"))
 
-        m.add_layer(L.Marker(location=(52.204793, 360.121558)))
+        #m.add_layer(L.Marker(location=(52.204793, 360.121558)))
 
         countries = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
         c = countries[countries['name'] == input.country()]
         
-        highlight = L.GeoData(geo_dataframe = c, style={'color': 'green', 'fillColor': 'green'},  hover_style={'fillColor': 'green', 'fillOpacity': 1})
+        highlight = L.GeoData(geo_dataframe = c, style={'color': 'purple', 'fillColor': 'purple'},  hover_style={'fillColor': 'green', 'fillOpacity': 1})
 
         m.add_layer(highlight)
+        
+        greencountries = []
+        
+        countries = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+        names1 = set(countries['iso_a3'])
+        names2 = set(co2.country_code)
+        names = names1 & names2
+        for code in names:
+            user = co2[co2.country_code == code]
+            user = user[user.year == input.co2year()]
+            if len(user.value.values) > 0:
+                if (user.value.values[0]) <= float(input.co2emission()):
+                    greencountries.append(code)
+        #greencountries = ['CHN', 'CAN']
+        allgreenc = countries.loc[countries['iso_a3'].isin(greencountries)]
+        greenc = L.GeoData(geo_dataframe = allgreenc, style={'color': 'green', 'fillColor': 'green'}, hover_style={'fillColor': 'green', 'fillOpacity': 1})
+        
+        m.add_layer(greenc)
         register_widget("map", m)
-        
-        
+    
     
     @output
     @render.text
