@@ -3,6 +3,7 @@
 
 ### How to run the website?
 - in terminal, go to the directory where app.py is at
+- `pip install shiny`
 - run `shiny run --reload`
 - copy the link `http://127.0.0.1:8000` and paste it in an empty webpage
 - have fun!
