@@ -1,0 +1,7 @@
+shiny
+pandas
+matplotlib
+ipyleaflet
+shinywidgets
+googlesearch-python
+geopandas

@@ -1,6 +1,5 @@
-'''
-imports
-'''
+# imports
+
 # website
 from shiny import App, render, ui, reactive
 # dataframe
@@ -93,17 +92,17 @@ def server(input, output, session):
         ui.update_slider("zoom", value=reactive_read(m, "zoom"))
         
         # country geography data dataframe
-        countries = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
-        
+        countries = gpd.read_file('ne_110m_admin_0_countries/ne_110m_admin_0_countries.shp')
+
         # subset countries for the user-selected country
-        c = countries[countries['name'] == input.country()]
+        c = countries[countries['NAME'] == input.country()]
         # highlight selected country in purple
         highlight = L.GeoData(geo_dataframe = c, style={'color': 'purple', 'fillColor': 'purple'},  hover_style={'fillColor': 'purple', 'fillOpacity': 1})
         m.add_layer(highlight)
         
         # select "green" countries
         greencountries = []
-        names = set(countries['iso_a3']) & set(co2.country_code)
+        names = set(countries['ISO_A3']) & set(co2.country_code)
         for code in names:
             user = co2[co2.country_code == code]
             user = user[user.year == input.co2year()]
@@ -111,7 +110,7 @@ def server(input, output, session):
                 if (user.value.values[0]) <= float(input.co2emission()):
                     greencountries.append(code)
         # subset all "green" countries
-        allgreenc = countries.loc[countries['iso_a3'].isin(greencountries)]
+        allgreenc = countries.loc[countries['ISO_A3'].isin(greencountries)]
         # highlight those countries in green
         greenc = L.GeoData(geo_dataframe = allgreenc, style={'color': 'green', 'fillColor': 'green'}, hover_style={'fillColor': 'green', 'fillOpacity': 1})
         m.add_layer(greenc)
@@ -139,10 +138,9 @@ def server(input, output, session):
     @render.text
     def websites():
         phrase = f"{input.country()} {input.year()[0]} to {input.year()[1]} CO2 emission"
-        s = search(phrase, start=0, stop=5)
+        s = search(phrase, num_results=5)
         o = f"Search \"{phrase}\" on Google:\n"
         for i in s:
-            #ui.tags.link(i)
             o += i + "\n"
         return o
     
